@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,7 +28,6 @@ import shx.cotacaodolar.model.Periodo;
 @Service
 public class MoedaService {
 
-	// o formato da data que o método recebe é "MM-dd-yyyy"
     public List<Moeda> getCotacoesPeriodo(String startDate, String endDate) throws IOException, MalformedURLException, ParseException{
         Periodo periodo = new Periodo(startDate, endDate);
 
@@ -55,4 +55,40 @@ public class MoedaService {
         return moedasLista;
     }
 
+    public Moeda getCotacaoAtual() throws IOException, MalformedURLException, ParseException {
+        Date data = new Date();
+        String pattern = "MM-dd-yyyy";
+        String dataAtual = new SimpleDateFormat(pattern).format(data);
+
+        List<Moeda> cotacoes = this.getCotacoesPeriodo(dataAtual, dataAtual);
+
+        return getCotacaoUltimoDiaUtil(data, cotacoes, pattern);
+    }
+
+    public List<Moeda> getCotacoesMenoresAtual(String startDate, String endDate) throws IOException, MalformedURLException, ParseException {
+        Moeda cotacaoAtual = this.getCotacaoAtual();
+        List<Moeda> cotacoesPeriodo = this.getCotacoesPeriodo(startDate, endDate);
+
+        List<Moeda> cotacoes =  new ArrayList<>();
+
+        for(Moeda cotacao : cotacoesPeriodo) {
+            if(cotacao.preco < cotacaoAtual.preco) {
+                cotacoes.add(cotacao);
+            }
+        }
+
+        return cotacoes;
+    }
+
+    private Moeda getCotacaoUltimoDiaUtil(Date date, List<Moeda> cotacoes, String pattern) throws IOException, MalformedURLException, ParseException {
+        if(!cotacoes.isEmpty()) {
+            return cotacoes.get(0);
+        }
+
+        date = Date.from(date.toInstant().minus(Duration.ofDays(1)));
+        String dateMinusOneDay = new SimpleDateFormat(pattern).format(date);
+        cotacoes = this.getCotacoesPeriodo(dateMinusOneDay, dateMinusOneDay);
+
+        return getCotacaoUltimoDiaUtil(date, cotacoes, pattern);
+    }
 }
